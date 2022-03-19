@@ -1,15 +1,15 @@
-import { VStack,Flex } from '@chakra-ui/react';
-import React from 'react'
-import useLotteryContract from '../hooks/useLotteryContract';
-import LotteryListing from './LotteryListing';
+import React from "react";
+import { useSelector } from "react-redux";
+import LotteryListing from "./LotteryListing";
+import LotteryStats from "./LotteryStats";
 
 const LotteryDashBoard = () => {
-  const {allLotteryIds, fetchingLotteryIds} = useLotteryContract();
-
   return (
-      
-      <LotteryListing/>
-  )
-}
+    <>
+        <LotteryStats/>
+        <LotteryListing />
+    </>
+  );
+};
 
-export default LotteryDashBoard
+export default LotteryDashBoard;
