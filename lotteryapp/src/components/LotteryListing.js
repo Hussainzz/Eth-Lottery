@@ -1,3 +1,4 @@
+import {useEffect, useState} from 'react';
 import {
   Box,
   Button,
@@ -9,11 +10,13 @@ import {
   Heading,
   Text,
   Badge,
+  useDisclosure
 } from "@chakra-ui/react";
 import { FaEthereum } from "react-icons/fa";
 import { useSelector } from "react-redux";
-//import useLotteryContract from "../hooks/useLotteryContract";
+import useLotteryContract from "../hooks/useLotteryContract";
 import Spinner from "./Spinner";
+import LotteryDetailModal from './LotteryDetailModal';
 
 const backgrounds = [
   `url("data:image/svg+xml, %3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'560\' height=\'185\' viewBox=\'0 0 560 185\' fill=\'none\'%3E%3Cellipse cx=\'102.633\' cy=\'61.0737\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23ED64A6\' /%3E%3Cellipse cx=\'399.573\' cy=\'123.926\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23F56565\' /%3E%3Cellipse cx=\'366.192\' cy=\'73.2292\' rx=\'193.808\' ry=\'73.2292\' fill=\'%2338B2AC\' /%3E%3Cellipse cx=\'222.705\' cy=\'110.585\' rx=\'193.808\' ry=\'73.2292\' fill=\'%23ED8936\' /%3E%3C/svg%3E")`,
@@ -23,7 +26,14 @@ const backgrounds = [
 ];
 
 function Lottery(props) {
-  const { index, lotteryId } = props;
+  const { index, lotteryId, enterLottery, showLotteryDetails } = props;
+  const [entryFee, setEntryFee] = useState('');
+
+  const enterLotteryHandler = async() =>{
+    if(entryFee === "") return;
+    await enterLottery(lotteryId,entryFee)
+  }
+
   return (
     <Flex
       boxShadow={"lg"}
@@ -70,7 +80,7 @@ function Lottery(props) {
         </Text>
 
         <Box pt={4}>
-          <Input placeholder="Enter Eth" size="sm" />
+          <Input type="number" placeholder="Enter Eth" size="sm" value={entryFee} onChange={(e) => setEntryFee(e.target.value)}/>
 
           <Button
             size="sm"
@@ -83,9 +93,22 @@ function Lottery(props) {
               transform: "translateY(-2px)",
               boxShadow: "lg",
             }}
+            onClick={enterLotteryHandler}
           >
             Enter Lottery
           </Button>
+
+          <Button size="xs"
+            w={"full"}
+            mt={3}
+            bg={useColorModeValue("#000000", "gray.900")}
+            color={"white"}
+            rounded={"md"}
+            _hover={{
+              transform: "translateY(-2px)",
+              boxShadow: "lg",
+            }} onClick={() => {showLotteryDetails(lotteryId)}}>View Details</Button>
+
         </Box>
       </Flex>
       <Icon as={FaEthereum} boxSize="50" />
@@ -94,17 +117,32 @@ function Lottery(props) {
 }
 
 export default function LotteryListing() {
-  //const { allLotteryIds, fetchingLotteryIds, startLottery } = useLotteryContract();
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [modalData, setModalData] = useState({});
+  const { getLotteryIds, enterLottery } = useLotteryContract();
   const {loading, allLotteryIds} = useSelector(state => state.lottery)
+
+  useEffect(() => {
+      (async () => {
+        await getLotteryIds();
+      })()
+  },[])
+
+  const showLotteryDetails = async( lotteryId ) => {
+    setModalData({
+      lotteryId: lotteryId.toString(),
+    })
+    onOpen()
+  }
+
   return (
     <Flex
       textAlign={"center"}
-      pt={5}
+      pt={3}
       justifyContent={"center"}
       direction={"column"}
       width={"full"}
     >
-      <Button>Start lottery</Button>
        { (!loading) ?
       <SimpleGrid
         p={4}
@@ -115,11 +153,12 @@ export default function LotteryListing() {
       >
       
         {allLotteryIds.map((data, index) =>(
-          <Lottery index={index} key={index} lotteryId={data}/>
+          <Lottery index={index} key={index} lotteryId={data} enterLottery={enterLottery} showLotteryDetails={showLotteryDetails} setModalData={setModalData}/>
         ))}
        
       </SimpleGrid>
        : <Spinner loading size={40}/>}
+       <LotteryDetailModal isOpen={isOpen} onClose={onClose} data={modalData}/>
     </Flex>
   );
 }

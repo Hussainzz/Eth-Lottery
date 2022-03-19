@@ -1,15 +1,13 @@
-import {useEffect, useCallback} from 'react'
+import { useCallback} from 'react'
 import * as wagmi from 'wagmi';
 import {useProvider, useSigner} from 'wagmi';
-import {useSelector, useDispatch} from 'react-redux';
-
+import {useDispatch} from 'react-redux';
+import {ethers} from 'ethers';
 import LotteryContract from '../contracts/Lottery.json';
 
 
 const useLotteryContract = () => {
     const  dispatch = useDispatch();
-
-    const {allLotteryIds, loading:fetchingLotteryIds} = useSelector(state => state.lottery);
 
     const [signer] = useSigner();
 
@@ -21,28 +19,6 @@ const useLotteryContract = () => {
         signerOrProvider: signer.data || provider
     });
 
-    useEffect(() =>{
-        async function getAllIds(){
-            await getLotteryIds();
-        }
-        getAllIds();
-    },[])
-
-
-    useEffect(() =>{
-        async function getManager(){
-            await getLotteryManagerAddress();
-        }
-        getManager();
-    },[])
-
-    useEffect(() =>{
-        (async() => {
-            await getLotteryAllowedCount();
-        })()
-    },[])
-
-    
     const getLotteryAllowedCount = async() => {
         try {
             dispatch({
@@ -51,7 +27,7 @@ const useLotteryContract = () => {
             const allowedPlayerCount = await contract.totalAllowedPlayers();
             dispatch({
                 type:'SAVE_ALLOWED_COUNT',
-                payload: allowedPlayerCount
+                payload: allowedPlayerCount.toString()
             });
         } catch (error) {
             dispatch({
@@ -104,11 +80,19 @@ const useLotteryContract = () => {
         })
     }
 
+    const enterLottery = async(lotteryId, eth)=>{
+        await contract.enterLottery(lotteryId.toString(),{
+            from: signer.data._address,
+            value: ethers.utils.parseEther(eth)
+        })
+    }
+
     return {
-        allLotteryIds,
-        fetchingLotteryIds,
+        getLotteryIds,
         getLotteryManagerAddress,
-        startLottery
+        getLotteryAllowedCount,
+        startLottery,
+        enterLottery
     }
 }
 

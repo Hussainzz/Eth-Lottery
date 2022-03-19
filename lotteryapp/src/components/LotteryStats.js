@@ -1,15 +1,17 @@
-import {useEffect, useState} from 'react';
+import {useEffect} from 'react';
 import {
     Box,
-    chakra,
     Flex,
     SimpleGrid,
     Stat,
     StatLabel,
     StatNumber,
     useColorModeValue,
+    Button
   } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
+import useLotteryContract from "../hooks/useLotteryContract";
+import { useMetaMaskAccount } from '../context/AccountContext';
 
   function StatsCard(props) {
     const { title, stat, icon } = props;
@@ -36,26 +38,40 @@ import { useSelector } from 'react-redux';
   }
   
   export default function LotteryStats() {
+    const { startLottery, getLotteryManagerAddress, getLotteryAllowedCount } = useLotteryContract();
+    const { connectedAddr, connected} = useMetaMaskAccount();
     const {manager, fetchingManagerAddr, allowedCount, fetchingAllowedCount}= useSelector(state => state.lottery);
-    const [allowedC, setAllowedC] = useState('');
+
     useEffect(() => {
-        if(typeof allowedCount !== "undefined") {
-            setAllowedC(allowedCount.toString());
-        }    
-    },[fetchingAllowedCount])
+      (async()=>{
+          await getLotteryManagerAddress();
+      })()
+    },[])
+
+    useEffect(() => {
+      (async()=>{
+          await getLotteryAllowedCount();
+      })()
+    },[])
 
     return (
-      <Box maxW="7xl" mx={'auto'} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, lg: 8 }}>
-          <StatsCard
-            title={'Lottery Manager By'}
-            stat={(fetchingManagerAddr)?'Loading...':manager}
-          />
-          <StatsCard
-            title={'Total Players Allowed Per Lottery'}
-            stat={(fetchingAllowedCount)?'Loading...':allowedC}
-          />
-        </SimpleGrid>
-      </Box>
+      <>
+        {((connected) && (connectedAddr === manager)) && 
+          <Box maxW="7xl" mx={'auto'} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
+            <Button onClick={startLottery} colorScheme="blue">Start lottery</Button>
+          </Box>}
+        <Box maxW="7xl" mx={'auto'} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, lg: 8 }}>
+            <StatsCard
+              title={'Lottery Manager By'}
+              stat={(fetchingManagerAddr)?'Loading...':manager}
+            />
+            <StatsCard
+              title={'Total Players Allowed Per Lottery'}
+              stat={(fetchingAllowedCount)?'Loading...':allowedCount}
+            />
+          </SimpleGrid>
+        </Box>
+      </>
     );
   }

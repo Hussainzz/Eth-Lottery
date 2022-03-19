@@ -9,15 +9,18 @@ export const lotteryListReducer = (state={
     switch(action.type) {
         case 'REQUEST_LOTTERY_LISTS':
             return {
+                ...state,
                 loading: true
             }
         case 'REQUEST_LOTTERY_LISTS_FETCHED':
             return{
+                ...state,
                 loading: false,
                 allLotteryIds: action.payload
             }
         case 'REQUEST_LOTTERY_LISTS_FAILED':
             return{
+                ...state,
                 loading: false,
                 error: action.payload
             }
