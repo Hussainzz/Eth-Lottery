@@ -1,0 +1,16 @@
+node_modules
+.env
+coverage
+coverage.json
+typechain
+
+#Hardhat files
+cache
+artifacts
+deployments
+
+#client app
+lotteryapp/.env
+lotteryapp/node_modules
+lotteryapp/src/contracts
+
