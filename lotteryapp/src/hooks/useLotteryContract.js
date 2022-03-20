@@ -4,6 +4,7 @@ import {useProvider, useSigner} from 'wagmi';
 import {useDispatch} from 'react-redux';
 import {ethers} from 'ethers';
 import LotteryContract from '../contracts/Lottery.json';
+import { startAction, stopAction, errorAction } from '../redux/reducers/uiActions';
 
 
 const useLotteryContract = () => {
@@ -20,59 +21,52 @@ const useLotteryContract = () => {
     });
 
     const getLotteryAllowedCount = async() => {
+        dispatch(startAction('FETCHING_ALLOWED_COUNT'));
         try {
-            dispatch({
-                type:'FETCHING_ALLOWED_COUNT'
-            })
             const allowedPlayerCount = await contract.totalAllowedPlayers();
             dispatch({
-                type:'SAVE_ALLOWED_COUNT',
+                type:'FETCHING_ALLOWED_COUNT_SUCCESS',
                 payload: allowedPlayerCount.toString()
             });
-        } catch (error) {
-            dispatch({
-                type:'FETCHING_ALLOWED_COUNT_FAILED',
-                payload: 'Error while fetching allowed count'
-            });
+        } catch (e) {
+            console.log('fetching lottery allowed count failed', e);
+            dispatch(errorAction('FETCHING_ALLOWED_COUNT', 'Error while fetching allowed count'));
         }
+        dispatch(stopAction('FETCHING_ALLOWED_COUNT'))
+
     }
 
     const getLotteryManagerAddress = async() => {
+        dispatch(startAction('FETCH_LOTTERY_MANAGER'));
         try {
-            dispatch({
-                type:'FETCHING_MANAGER_ADDR'
-            })
             const manager = await contract.lotteryManager();
             dispatch({
-                type:'SAVE_MANAGER',
+                type:'FETCH_LOTTERY_MANAGER_SUCCESS',
                 payload: manager
             });
-        } catch (error) {
-            dispatch({
-                type:'FETCHING_MANAGER_ADDR_FAILED',
-                payload: 'Error while fetching manager address'
-            });
+        } catch (e) {
+            console.log('fetching lottery manager failed', e);
+            dispatch(errorAction('FETCH_LOTTERY_MANAGER', 'Error while fetching lottery manager'));
         }
+        dispatch(stopAction('FETCH_LOTTERY_MANAGER'))
     }
 
-    const getLotteryIds = useCallback(async () =>{
-        dispatch({
-            type:'REQUEST_LOTTERY_LISTS'
-        });
+    const fetchAllLotteryIds = async () => {
+        dispatch(startAction('FETCH_LOTTERY_IDS'));
         try{
             const lotteries = await contract.getAllLotteryIds();
             dispatch({
-                type:'REQUEST_LOTTERY_LISTS_FETCHED',
+                type:'FETCH_LOTTERY_IDS_SUCCESS',
                 payload: lotteries
             });
         }catch(e){
-            console.log(e)
-            dispatch({
-                type:'REQUEST_LOTTERY_LISTS_FAILED',
-                payload: 'Error while fetching lotteryIds'
-            });
+            console.log('fetching all lotteryIds failed', e);
+            dispatch(errorAction('FETCH_LOTTERY_IDS', 'Error while fetching all lotteryIds'));
+
         }
-    },[contract, dispatch])
+        dispatch(stopAction('FETCH_LOTTERY_IDS'))
+    }
+
 
     const startLottery = async()=>{
         await contract.startLottery({
@@ -88,7 +82,7 @@ const useLotteryContract = () => {
     }
 
     return {
-        getLotteryIds,
+        fetchAllLotteryIds,
         getLotteryManagerAddress,
         getLotteryAllowedCount,
         startLottery,

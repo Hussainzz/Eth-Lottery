@@ -135,5 +135,16 @@ contract Lottery is VRFConsumerBaseV2{
         payable(allPlayers[winnerIndex]).transfer(address(this).balance);
         emit WinnerDeclared(requestId,_lotteryId,allPlayers[winnerIndex]);
     }
+
+    function getLotteryDetails(uint256 _lotteryId) public view returns(
+        uint256,
+        uint256,
+        uint256 ,
+        address[] memory,
+        address ,
+        bool
+        ){
+            return LOTTERY_DATA.getLottery(_lotteryId);
+    }
 }
 

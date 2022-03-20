@@ -10,6 +10,7 @@ import {
   Heading,
   Text,
   Badge,
+  Stack,
   useDisclosure
 } from "@chakra-ui/react";
 import { FaEthereum } from "react-icons/fa";
@@ -17,6 +18,8 @@ import { useSelector } from "react-redux";
 import useLotteryContract from "../hooks/useLotteryContract";
 import Spinner from "./Spinner";
 import LotteryDetailModal from './LotteryDetailModal';
+import { checkIfLoading, checkIfError } from '../redux/reducers/selector';
+import ToastMessage from './ToastMessage';
 
 const backgrounds = [
   `url("data:image/svg+xml, %3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'560\' height=\'185\' viewBox=\'0 0 560 185\' fill=\'none\'%3E%3Cellipse cx=\'102.633\' cy=\'61.0737\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23ED64A6\' /%3E%3Cellipse cx=\'399.573\' cy=\'123.926\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23F56565\' /%3E%3Cellipse cx=\'366.192\' cy=\'73.2292\' rx=\'193.808\' ry=\'73.2292\' fill=\'%2338B2AC\' /%3E%3Cellipse cx=\'222.705\' cy=\'110.585\' rx=\'193.808\' ry=\'73.2292\' fill=\'%23ED8936\' /%3E%3C/svg%3E")`,
@@ -119,15 +122,21 @@ function Lottery(props) {
 export default function LotteryListing() {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [modalData, setModalData] = useState({});
-  const { getLotteryIds, enterLottery } = useLotteryContract();
-  const {loading, allLotteryIds} = useSelector(state => state.lottery)
+  const {enterLottery, fetchAllLotteryIds } = useLotteryContract();
+  const {allLotteryIds} = useSelector(state => state.lottery);
+
+  const loadingState = useSelector(state => state.loading);
+  
+  const isLoading = checkIfLoading(loadingState, 'FETCH_LOTTERY_IDS')
+  const hasError = checkIfError(loadingState,'FETCH_LOTTERY_IDS');
 
   useEffect(() => {
       (async () => {
-        await getLotteryIds();
+        await fetchAllLotteryIds();
       })()
   },[])
 
+  
   const showLotteryDetails = async( lotteryId ) => {
     setModalData({
       lotteryId: lotteryId.toString(),
@@ -143,22 +152,33 @@ export default function LotteryListing() {
       direction={"column"}
       width={"full"}
     >
-       { (!loading) ?
-      <SimpleGrid
-        p={4}
-        columns={{ base: 1, xl: 3 }}
-        spacing={"8"}
-        mt={16}
-        ml={4}
-      >
+
+       { (!isLoading) ?
+        <>
+          {allLotteryIds.length && !hasError?
+              <SimpleGrid
+                p={4}
+                columns={{ base: 1, xl: 3 }}
+                spacing={"8"}
+                mt={16}
+                ml={4}
+              >
+                
+                {allLotteryIds.map((data, index) =>(
+                  <Lottery index={index} key={index} lotteryId={data} enterLottery={enterLottery} showLotteryDetails={showLotteryDetails} setModalData={setModalData}/>
+                ))}
+              </SimpleGrid>:
+
+              <Stack direction="row" alignItems="center" justifyContent={'center'} pt="8">
+                <Text p="10">No Active Lotteries Currently</Text>
+              </Stack>
+          }
+              
+        </>
       
-        {allLotteryIds.map((data, index) =>(
-          <Lottery index={index} key={index} lotteryId={data} enterLottery={enterLottery} showLotteryDetails={showLotteryDetails} setModalData={setModalData}/>
-        ))}
-       
-      </SimpleGrid>
        : <Spinner loading size={40}/>}
        <LotteryDetailModal isOpen={isOpen} onClose={onClose} data={modalData}/>
+       <ToastMessage message={hasError} toastType="error"/>
     </Flex>
   );
 }
