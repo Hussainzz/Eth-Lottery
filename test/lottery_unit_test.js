@@ -34,10 +34,11 @@ describe("LotteryGame Unit Tests", () => {
 
     });
 
+
     it("Should only allow lotteryManager to start the lottery", async () => {
         await expect(
           lotteryGame.connect(user2).startLottery()
-        ).to.be.revertedWith("only_lottery_manager_allowed");
+        ).to.be.revertedWith("onlyLotteryManagerAllowed()");
     });
 
     it("Should Start a New Lottery", async () => {
@@ -54,7 +55,7 @@ describe("LotteryGame Unit Tests", () => {
     it("Should reject player from entering lottery with less fee than the lotteryFee", async () => {
         await expect(lotteryGame.connect(user2).enterLottery(1, {
           value: ethers.utils.parseEther("0.4"),
-        })).revertedWith("invalid_entry_fee");
+        })).revertedWith("invalidFee()");
     });
 
     it("Should Pick A Pick A Random Winner", async () => {

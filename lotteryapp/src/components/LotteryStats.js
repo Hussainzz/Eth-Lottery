@@ -1,4 +1,4 @@
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {
     Box,
     Flex,
@@ -39,7 +39,8 @@ import ToastMessage from './ToastMessage';
     );
   }
   
-  export default function LotteryStats() {
+  export default function LotteryStats() {  
+    const [isStarting, setIsStarting] = useState(false);
     const { startLottery, getLotteryManagerAddress, getLotteryAllowedCount } = useLotteryContract();
     const { connectedAddr, connected} = useMetaMaskAccount();
     const {manager, allowedCount}= useSelector(state => state.lottery);
@@ -62,16 +63,22 @@ import ToastMessage from './ToastMessage';
       })()
     },[])
 
+    const startLotteryHandler = async () => {
+      setIsStarting(true);
+      await startLottery()
+      setIsStarting(false);
+    }
+
     return (
       <>
         {((connected) && (connectedAddr === manager)) && 
           <Box maxW="7xl" mx={'auto'} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
-            <Button onClick={startLottery} colorScheme="blue">Start lottery</Button>
+            <Button onClick={startLotteryHandler} colorScheme="blue" isLoading={isStarting}>Start lottery</Button>
           </Box>}
         <Box maxW="7xl" mx={'auto'} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, lg: 8 }}>
             <StatsCard
-              title={'Lottery Manager By'}
+              title={'Lottery Managed By'}
               stat={
                 (isLoadingManger)?'Loading...':
                   (manager && !errorFetchingManager) && manager

@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useState, useCallback} from 'react';
 import {
   Box,
   Button,
@@ -11,7 +11,8 @@ import {
   Text,
   Badge,
   Stack,
-  useDisclosure
+  useDisclosure,
+  useToast
 } from "@chakra-ui/react";
 import { FaEthereum } from "react-icons/fa";
 import { useSelector } from "react-redux";
@@ -20,6 +21,10 @@ import Spinner from "./Spinner";
 import LotteryDetailModal from './LotteryDetailModal';
 import { checkIfLoading, checkIfError } from '../redux/reducers/selector';
 import ToastMessage from './ToastMessage';
+import {ethers} from 'ethers';
+import useLotteryAction from '../hooks/useLotteryActions';
+import {getEMessage, eventMessage} from '../errorMessages';
+import { useMetaMaskAccount } from '../context/AccountContext';
 
 const backgrounds = [
   `url("data:image/svg+xml, %3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'560\' height=\'185\' viewBox=\'0 0 560 185\' fill=\'none\'%3E%3Cellipse cx=\'102.633\' cy=\'61.0737\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23ED64A6\' /%3E%3Cellipse cx=\'399.573\' cy=\'123.926\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23F56565\' /%3E%3Cellipse cx=\'366.192\' cy=\'73.2292\' rx=\'193.808\' ry=\'73.2292\' fill=\'%2338B2AC\' /%3E%3Cellipse cx=\'222.705\' cy=\'110.585\' rx=\'193.808\' ry=\'73.2292\' fill=\'%23ED8936\' /%3E%3C/svg%3E")`,
@@ -29,13 +34,8 @@ const backgrounds = [
 ];
 
 function Lottery(props) {
-  const { index, lotteryId, enterLottery, showLotteryDetails } = props;
+  const { index,lotteryId,txnLoading,enterLotteryHandler, showLotteryDetails } = props;
   const [entryFee, setEntryFee] = useState('');
-
-  const enterLotteryHandler = async() =>{
-    if(entryFee === "") return;
-    await enterLottery(lotteryId,entryFee)
-  }
 
   return (
     <Flex
@@ -96,7 +96,9 @@ function Lottery(props) {
               transform: "translateY(-2px)",
               boxShadow: "lg",
             }}
-            onClick={enterLotteryHandler}
+            onClick={() => {enterLotteryHandler(lotteryId, entryFee)}}
+            isLoading={txnLoading}
+            id={`enterBtn${lotteryId}`}
           >
             Enter Lottery
           </Button>
@@ -120,9 +122,55 @@ function Lottery(props) {
 }
 
 export default function LotteryListing() {
+  const toast = useToast();
+  const [showEvent, setShowEvent] = useState(false);
+  const {connected} = useMetaMaskAccount();
+
+  const {
+    txnData,
+    txnError, 
+    txnLoading, 
+    callContract,
+    waitResult, wait
+  } = useLotteryAction('enterLottery');
+
+  useEffect(() => {
+    if((typeof txnData !== "undefined") && (typeof waitResult.data !== "undefined") && (!waitResult.loading)){
+      if(showEvent && waitResult.data.events){
+        const e = waitResult.data.events[0];
+        toast({
+          title:  eventMessage(e.event) ,
+          status: 'success',
+          isClosable: true,
+        });
+        setShowEvent(false);
+      }
+    }
+  },[waitResult])
+
+  
+  useEffect(() => {
+    if(typeof txnError !== "undefined"){
+      if(txnError?.name && txnError.name === "UserRejectedRequestError"){
+        toast({
+          title: 'User rejected the transaction',
+          status: 'error',
+          isClosable: true,
+        });
+        return;
+      }
+      toast({
+        title: getEMessage(txnError.data.message),
+        status: 'error',
+        isClosable: true,
+      });
+    } 
+  },[txnError])
+
+
   const { isOpen, onOpen, onClose } = useDisclosure()
   const [modalData, setModalData] = useState({});
-  const {enterLottery, fetchAllLotteryIds } = useLotteryContract();
+  const {fetchAllLotteryIds } = useLotteryContract();
   const {allLotteryIds} = useSelector(state => state.lottery);
 
   const loadingState = useSelector(state => state.loading);
@@ -143,6 +191,25 @@ export default function LotteryListing() {
     })
     onOpen()
   }
+
+  const enterLotteryHandler = useCallback(async(lotteryId, ethValue) => {
+    if(!connected){
+      toast({
+        title: 'Please Connect to MetaMask',
+        status: 'error',
+        isClosable: true,
+      });
+      return;
+    }
+    await callContract({
+      args: [lotteryId],
+      overrides: {
+        value: ethers.utils.parseEther(ethValue.toString())
+      }
+    });
+    await wait();
+    setShowEvent(true);
+  },[connected])
 
   return (
     <Flex
@@ -165,7 +232,7 @@ export default function LotteryListing() {
               >
                 
                 {allLotteryIds.map((data, index) =>(
-                  <Lottery index={index} key={index} lotteryId={data} enterLottery={enterLottery} showLotteryDetails={showLotteryDetails} setModalData={setModalData}/>
+                  <Lottery index={index} key={index} lotteryId={data} txnLoading={txnLoading} enterLotteryHandler={enterLotteryHandler} showLotteryDetails={showLotteryDetails} setModalData={setModalData}/>
                 ))}
               </SimpleGrid>:
 

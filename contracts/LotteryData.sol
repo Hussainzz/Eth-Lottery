@@ -26,14 +26,21 @@ contract LotteryData {
         manager = msg.sender;
     }
 
+    error lotteryNotFound();
+    error onlyLotteryManagerAllowed();
+    error actionNotAllowed();
+
     modifier onlyManager(){
-        require(msg.sender == manager, "not_action_allowed");
+        if(msg.sender != manager) revert onlyLotteryManagerAllowed();
+        //require(msg.sender == manager, "not_action_allowed");
         _;
     }
 
     modifier onlyLoterryContract(){
-        require(isLotteryContractSet, "not_action_allowed");
-        require(msg.sender == lotteryContract, "only_lottery_manager_allowed");
+        //require(isLotteryContractSet, "not_action_allowed");
+        //require(msg.sender == lotteryContract, "only_lottery_manager_allowed");
+        if(!isLotteryContractSet) revert actionNotAllowed();
+        if(msg.sender != lotteryContract) revert onlyLotteryManagerAllowed();
         _;
     }
 
@@ -62,7 +69,10 @@ contract LotteryData {
 
     function addPlayerToLottery(uint256 _lotteryId, uint256 _updatedPricePool, address _player) external onlyLoterryContract{
         LotteryInfo storage lottery = lotteries[_lotteryId];
-        require(lottery.lotteryId != 0, "lottery_not_found");
+        if(lottery.lotteryId == 0){
+            revert lotteryNotFound();
+        }
+        //require(lottery.lotteryId != 0, "lottery_not_found");
         lottery.players.push(_player);
         lottery.prizePool = _updatedPricePool;
     }
@@ -70,19 +80,28 @@ contract LotteryData {
 
     function getLotteryPlayers(uint256 _lotteryId) public view returns(address[] memory) {
         LotteryInfo memory tmpLottery = lotteries[_lotteryId];
-        require(tmpLottery.lotteryId != 0, "lottery_not_found");
+        //require(tmpLottery.lotteryId != 0, "lottery_not_found");
+        if(tmpLottery.lotteryId == 0){
+            revert lotteryNotFound();
+        }
         return tmpLottery.players;
     }
 
     function isLotteryFinished(uint256 _lotteryId) public view returns(bool){
         LotteryInfo memory tmpLottery = lotteries[_lotteryId];
-        require(tmpLottery.lotteryId != 0, "lottery_not_found");
+        //require(tmpLottery.lotteryId != 0, "lottery_not_found");
+         if(tmpLottery.lotteryId == 0){
+            revert lotteryNotFound();
+        }
         return tmpLottery.isFinished;
     }
 
     function getLotteryPlayerLength(uint256 _lotteryId) public view returns(uint256){
         LotteryInfo memory tmpLottery = lotteries[_lotteryId];
-        require(tmpLottery.lotteryId != 0, "lottery_not_found");
+        //require(tmpLottery.lotteryId != 0, "lottery_not_found");
+         if(tmpLottery.lotteryId == 0){
+            revert lotteryNotFound();
+        }
         return tmpLottery.players.length;
     }
 
@@ -95,7 +114,10 @@ contract LotteryData {
         bool
         ){
             LotteryInfo memory tmpLottery = lotteries[_lotteryId];
-            require(tmpLottery.lotteryId != 0, "lottery_not_found");
+            //require(tmpLottery.lotteryId != 0, "lottery_not_found");
+            if(tmpLottery.lotteryId == 0){
+                revert lotteryNotFound();
+            }
             return (
                 tmpLottery.lotteryId,
                 tmpLottery.ticketPrice,
@@ -108,7 +130,11 @@ contract LotteryData {
 
     function setWinnerForLottery(uint256 _lotteryId, uint256 _winnerIndex) external onlyLoterryContract {
         LotteryInfo storage lottery = lotteries[_lotteryId];
-        require(lottery.lotteryId != 0, "lottery_not_found");
+        //require(lottery.lotteryId != 0, "lottery_not_found");
+        //require(tmpLottery.lotteryId != 0, "lottery_not_found");
+        if(lottery.lotteryId == 0){
+            revert lotteryNotFound();
+        }
         lottery.isFinished = true;
         lottery.winner = lottery.players[_winnerIndex];
     }

@@ -43,6 +43,16 @@ contract Lottery is VRFConsumerBaseV2{
     //To emit data which will contain the id of newly created lottery
     event LotteryCreated(uint256);
 
+
+    //custom Errors
+    error invalidValue();
+    error invalidFee();
+    error lotteryNotActive();
+    error lotteryFull();
+    error lotteryEnded();
+    error playersNotFound();
+    error onlyLotteryManagerAllowed();
+
      constructor(
         bytes32 _keyHash,
         uint64 subscriptionId, 
@@ -60,7 +70,8 @@ contract Lottery is VRFConsumerBaseV2{
     }
 
     modifier onlyLotteryManager {
-        require(msg.sender == lotteryManager, "only_lottery_manager_allowed");
+        //require(msg.sender == lotteryManager, "only_lottery_manager_allowed");
+        if(msg.sender != lotteryManager) revert onlyLotteryManagerAllowed();
         _;
     }
 
@@ -69,8 +80,11 @@ contract Lottery is VRFConsumerBaseV2{
     }
 
     function updateTotalPlayersAllowed(uint256 _c) public onlyLotteryManager{
-        require(_c != 0 , "action_not_allowed_value_zero");
-        require(_c != totalAllowedPlayers, "action_not_allowed");
+        if((_c == 0) || (_c == totalAllowedPlayers)){
+            revert invalidValue();
+        }
+        //require(_c != 0 , "action_not_allowed_value_zero");
+        //require(_c != totalAllowedPlayers, "action_not_allowed");
         totalAllowedPlayers = _c;
     }
 
@@ -92,10 +106,14 @@ contract Lottery is VRFConsumerBaseV2{
         address winner, 
         bool isFinished) = LOTTERY_DATA.getLottery(_lotteryId);
 
-        require(!isFinished, "lottery_not_active");
-        require(players.length < totalAllowedPlayers, "lottery_full");
+        if(isFinished) revert lotteryNotActive();
+        if(players.length > totalAllowedPlayers) revert lotteryFull();
+        if(msg.value < ticketPrice) revert invalidFee();
+
+        //require(!isFinished, "lottery_not_active");
+        //require(players.length < totalAllowedPlayers, "lottery_full");
         //require(activeLotteryPlayers[msg.sender], "duplicate_entry");
-        require(msg.value >= ticketPrice, "invalid_entry_fee");
+        //require(msg.value >= ticketPrice, "invalid_entry_fee");
 
         uint256  updatedPricePool = prizePool + msg.value;
         LOTTERY_DATA.addPlayerToLottery(_lotteryId, updatedPricePool, msg.sender);
@@ -104,11 +122,13 @@ contract Lottery is VRFConsumerBaseV2{
 
     function pickWinner(uint256 _lotteryId) public onlyLotteryManager {
 
-        require(!LOTTERY_DATA.isLotteryFinished(_lotteryId),"lottery_ended");
+        if(LOTTERY_DATA.isLotteryFinished(_lotteryId)) revert lotteryEnded();
+        //require(!LOTTERY_DATA.isLotteryFinished(_lotteryId),"lottery_ended");
 
         address[] memory p = LOTTERY_DATA.getLotteryPlayers(_lotteryId);
         if(p.length == 1) {
-            require(p[0] != address(0), "no_players_found");
+            if(p[0] == address(0)) revert playersNotFound();
+            //require(p[0] != address(0), "no_players_found");
             LOTTERY_DATA.setWinnerForLottery(_lotteryId, 0);
             payable(p[0]).transfer(address(this).balance);
             emit WinnerDeclared(0,_lotteryId,p[0]);
