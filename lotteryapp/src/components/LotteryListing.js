@@ -34,9 +34,9 @@ const backgrounds = [
 ];
 
 function Lottery(props) {
-  const { index,lotteryId,txnLoading,enterLotteryHandler, showLotteryDetails } = props;
+  const { index,lotteryId,enterLotteryHandler, showLotteryDetails, entryBtnLoaders } = props;
   const [entryFee, setEntryFee] = useState('');
-
+  
   return (
     <Flex
       boxShadow={"lg"}
@@ -97,7 +97,7 @@ function Lottery(props) {
               boxShadow: "lg",
             }}
             onClick={() => {enterLotteryHandler(lotteryId, entryFee)}}
-            isLoading={txnLoading}
+            isLoading={entryBtnLoaders[lotteryId]}
             id={`enterBtn${lotteryId}`}
           >
             Enter Lottery
@@ -123,9 +123,10 @@ function Lottery(props) {
 
 export default function LotteryListing() {
   const toast = useToast();
+  const [reloadList, setReloadList] = useState(true);
   const [showEvent, setShowEvent] = useState(false);
-  const {connected} = useMetaMaskAccount();
-
+  const { connectedAddr, connected} = useMetaMaskAccount();
+  const [entryBtnLoaders, setEntryBtnLoaders] = useState({})
   const {
     txnData,
     txnError, 
@@ -134,24 +135,74 @@ export default function LotteryListing() {
     waitResult, wait
   } = useLotteryAction('enterLottery');
 
+  const {
+    txnData: startLData,
+    txnError: startLError, 
+    txnLoading: startLLoading, 
+    callContract:startLottery,
+    waitResult:startLotteryWaitResult, wait:swait
+  } = useLotteryAction('startLottery');
+
+  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [modalData, setModalData] = useState({});
+  const {fetchAllLotteryIds} = useLotteryContract();
+  const {allLotteryIds, manager} = useSelector(state => state.lottery);
+  const loadingState = useSelector(state => state.loading);
+  
+  const isLoading = checkIfLoading(loadingState, 'FETCH_LOTTERY_IDS')
+  const hasError = checkIfError(loadingState,'FETCH_LOTTERY_IDS');
+
+  //enterLottery
   useEffect(() => {
-    if((typeof txnData !== "undefined") && (typeof waitResult.data !== "undefined") && (!waitResult.loading)){
-      if(showEvent && waitResult.data.events){
-        const e = waitResult.data.events[0];
+    handlerTxnEvents(txnData, waitResult);
+  },[waitResult])
+
+  //startLottery
+  useEffect(() => {
+    handlerTxnEvents(startLData, startLotteryWaitResult);
+  },[startLotteryWaitResult])
+
+
+  const handlerTxnEvents = async(eventData, waitData) => {
+    if((typeof eventData !== "undefined") && (typeof waitData.data !== "undefined") && (!waitData.loading)){
+      if(showEvent && waitData.data.events){
+        const e = waitData.data.events[0];
         toast({
           title:  eventMessage(e.event) ,
           status: 'success',
           isClosable: true,
         });
         setShowEvent(false);
+        if(e.event === 'NewLotteryPlayer'){
+          setEntryBtnLoaders(prevS => {
+            return {
+              ...prevS,
+              [e.args[0].toString()]: txnLoading
+            }
+          });
+        }
+
+        if(e.event === 'LotteryCreated') {
+          setReloadList(true);
+        }
       }
     }
-  },[waitResult])
+  }
 
   
   useEffect(() => {
-    if(typeof txnError !== "undefined"){
-      if(txnError?.name && txnError.name === "UserRejectedRequestError"){
+      handlerTxnErrors(txnError);
+      setEntryBtnLoaders({})
+  },[txnError])
+
+  useEffect(() => {
+      handlerTxnErrors(startLError);
+      setEntryBtnLoaders({})
+  },[startLError])
+
+  const handlerTxnErrors = async(err) => {
+    if(typeof err !== "undefined"){
+      if(err?.name && err.name === "UserRejectedRequestError"){
         toast({
           title: 'User rejected the transaction',
           status: 'error',
@@ -160,29 +211,21 @@ export default function LotteryListing() {
         return;
       }
       toast({
-        title: getEMessage(txnError.data.message),
+        title: getEMessage(err.data.message),
         status: 'error',
         isClosable: true,
       });
     } 
-  },[txnError])
+  }
 
-
-  const { isOpen, onOpen, onClose } = useDisclosure()
-  const [modalData, setModalData] = useState({});
-  const {fetchAllLotteryIds } = useLotteryContract();
-  const {allLotteryIds} = useSelector(state => state.lottery);
-
-  const loadingState = useSelector(state => state.loading);
-  
-  const isLoading = checkIfLoading(loadingState, 'FETCH_LOTTERY_IDS')
-  const hasError = checkIfError(loadingState,'FETCH_LOTTERY_IDS');
 
   useEffect(() => {
+      if(!reloadList) return;
       (async () => {
         await fetchAllLotteryIds();
+        setReloadList(false);
       })()
-  },[])
+  },[reloadList])
 
   
   const showLotteryDetails = async( lotteryId ) => {
@@ -201,6 +244,12 @@ export default function LotteryListing() {
       });
       return;
     }
+    setEntryBtnLoaders(prevS => {
+      return {
+        ...prevS,
+        [lotteryId]: true
+      }
+    });
     await callContract({
       args: [lotteryId],
       overrides: {
@@ -209,17 +258,42 @@ export default function LotteryListing() {
     });
     await wait();
     setShowEvent(true);
-  },[connected])
+  },[connected]);
+
+  const startLotteryHandler = async () => {
+    if(!connected){
+      toast({
+        title: 'Please Connect to MetaMask',
+        status: 'error',
+        isClosable: true,
+      });
+      return;
+    }
+    await startLottery();
+    await swait();
+    setShowEvent(true);
+  };
 
   return (
-    <Flex
+   <>
+   {((connected) && (connectedAddr === manager)) && 
+    <Flex textAlign={"center"}
+        pt={8}
+        ml={20}
+        justifyContent={"flex-start"}
+        direction={"row"}
+        >
+      <Button colorScheme="blue" isLoading={startLLoading} onClick={startLotteryHandler}>Start Lottery</Button>
+    </Flex>
+    }
+     <Flex
       textAlign={"center"}
       pt={3}
       justifyContent={"center"}
       direction={"column"}
       width={"full"}
-    >
-
+      >
+        
        { (!isLoading) ?
         <>
           {allLotteryIds.length && !hasError?
@@ -227,25 +301,26 @@ export default function LotteryListing() {
                 p={4}
                 columns={{ base: 1, xl: 3 }}
                 spacing={"8"}
-                mt={16}
+                mt={8}
                 ml={4}
               >
                 
                 {allLotteryIds.map((data, index) =>(
-                  <Lottery index={index} key={index} lotteryId={data} txnLoading={txnLoading} enterLotteryHandler={enterLotteryHandler} showLotteryDetails={showLotteryDetails} setModalData={setModalData}/>
+                  <Lottery index={index} key={index} lotteryId={data} enterLotteryHandler={enterLotteryHandler} showLotteryDetails={showLotteryDetails} setModalData={setModalData} entryBtnLoaders={entryBtnLoaders}/>
                 ))}
               </SimpleGrid>:
 
               <Stack direction="row" alignItems="center" justifyContent={'center'} pt="8">
                 <Text p="10">No Active Lotteries Currently</Text>
               </Stack>
-          }
+            }
               
         </>
       
-       : <Spinner loading size={40}/>}
+       : <Spinner loading size={40} applyPadding/>}
        <LotteryDetailModal isOpen={isOpen} onClose={onClose} data={modalData}/>
        <ToastMessage message={hasError} toastType="error"/>
     </Flex>
+   </>
   );
 }
