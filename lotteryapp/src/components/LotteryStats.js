@@ -6,8 +6,7 @@ import {
     Stat,
     StatLabel,
     StatNumber,
-    useColorModeValue,
-    Button
+    useColorModeValue
   } from '@chakra-ui/react';
 import { useSelector } from 'react-redux';
 import useLotteryContract from "../hooks/useLotteryContract";
@@ -15,7 +14,7 @@ import { checkIfLoading, checkIfError } from '../redux/reducers/selector';
 import ToastMessage from './ToastMessage';
 
   function StatsCard(props) {
-    const { title, stat, icon } = props;
+    const { title, stat } = props;
     return (
       <Stat
         px={{ base: 2, md: 4 }}

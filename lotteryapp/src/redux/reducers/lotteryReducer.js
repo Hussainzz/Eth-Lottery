@@ -1,7 +1,8 @@
 export const lotteryListReducer = (state={
     allLotteryIds:[],
     manager:null,
-    allowedCount:''
+    allowedCount:'',
+    details:{}
 }, action) => {
     switch(action.type) {
         case 'FETCH_LOTTERY_IDS_SUCCESS':
@@ -18,6 +19,14 @@ export const lotteryListReducer = (state={
             return{
                 ...state,
                 allowedCount: action.payload
+            }
+        case 'FETCHING_LOTTERY_DETAIL_SUCCESS':
+            return{
+                ...state,
+                details:{
+                    ...state.details,
+                    [action.payload.id]: action.payload.data
+                }
             }    
         default:
             return state

@@ -18,7 +18,6 @@ import { FaEthereum } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import useLotteryContract from "../hooks/useLotteryContract";
 import Spinner from "./Spinner";
-import LotteryDetailModal from './LotteryDetailModal';
 import { checkIfLoading, checkIfError } from '../redux/reducers/selector';
 import ToastMessage from './ToastMessage';
 import {ethers} from 'ethers';
@@ -34,9 +33,20 @@ const backgrounds = [
 ];
 
 function Lottery(props) {
-  const { index,lotteryId,enterLotteryHandler, showLotteryDetails, entryBtnLoaders } = props;
+  const { index,lotteryId,enterLotteryHandler, entryBtnLoaders } = props;
   const [entryFee, setEntryFee] = useState('');
   
+  const {getLotteryDetail} = useLotteryContract();
+  const {details} = useSelector(state => state.lottery);
+  const loadingState = useSelector(state => state.loading);
+  const isDetailLoading = checkIfLoading(loadingState, 'FETCHING_LOTTERY_DETAIL_SUCCESS')
+
+  useEffect(() => {
+    (async()=>{
+      await getLotteryDetail(lotteryId);
+    })()
+  },[entryBtnLoaders[lotteryId]])
+
   return (
     <Flex
       boxShadow={"lg"}
@@ -78,9 +88,25 @@ function Lottery(props) {
           </Badge>
         </Text>
 
-        <Text fontSize={"sm"} color={"gray.500"} pt={4}>
-          Active Players 2/5
-        </Text>
+        {isDetailLoading ? <Spinner/> :
+            <>
+              {(typeof details[lotteryId.toString()] !== 'undefined') ?
+                <>
+                  <Text fontSize={"sm"} color={"gray.500"} pt={4}>
+                    Active Players {details[lotteryId.toString()].players}
+                  </Text>
+                  <Text fontSize={"sm"} color={"gray.500"}>
+                    Ticket Price {details[lotteryId.toString()].ticketPrice} Eth
+                  </Text>
+                  <Text fontSize={"sm"} color={"gray.500"}>
+                    Price Pool {details[lotteryId.toString()].pricePool} Eth
+                  </Text>
+                </>
+                : ''
+              }
+            </>
+        }
+       
 
         <Box pt={4}>
           <Input type="number" placeholder="Enter Eth" size="sm" value={entryFee} onChange={(e) => setEntryFee(e.target.value)}/>
@@ -103,7 +129,7 @@ function Lottery(props) {
             Enter Lottery
           </Button>
 
-          <Button size="xs"
+          {/* <Button size="xs"
             w={"full"}
             mt={3}
             bg={useColorModeValue("#000000", "gray.900")}
@@ -112,7 +138,7 @@ function Lottery(props) {
             _hover={{
               transform: "translateY(-2px)",
               boxShadow: "lg",
-            }} onClick={() => {showLotteryDetails(lotteryId)}}>View Details</Button>
+            }} onClick={() => {showLotteryDetails(lotteryId)}}>View Details</Button> */}
 
         </Box>
       </Flex>
@@ -123,6 +149,7 @@ function Lottery(props) {
 
 export default function LotteryListing() {
   const toast = useToast();
+  const [modalLotteryId, setModalLotteryId] = useState(0);
   const [reloadList, setReloadList] = useState(true);
   const [showEvent, setShowEvent] = useState(false);
   const { connectedAddr, connected} = useMetaMaskAccount();
@@ -143,10 +170,8 @@ export default function LotteryListing() {
     waitResult:startLotteryWaitResult, wait:swait
   } = useLotteryAction('startLottery');
 
-  const { isOpen, onOpen, onClose } = useDisclosure()
-  const [modalData, setModalData] = useState({});
-  const {fetchAllLotteryIds} = useLotteryContract();
-  const {allLotteryIds, manager} = useSelector(state => state.lottery);
+  const {fetchAllLotteryIds, getLotteryDetail} = useLotteryContract();
+  const {allLotteryIds, manager, details} = useSelector(state => state.lottery);
   const loadingState = useSelector(state => state.loading);
   
   const isLoading = checkIfLoading(loadingState, 'FETCH_LOTTERY_IDS')
@@ -189,7 +214,6 @@ export default function LotteryListing() {
     }
   }
 
-  
   useEffect(() => {
       handlerTxnErrors(txnError);
       setEntryBtnLoaders({})
@@ -227,13 +251,6 @@ export default function LotteryListing() {
       })()
   },[reloadList])
 
-  
-  const showLotteryDetails = async( lotteryId ) => {
-    setModalData({
-      lotteryId: lotteryId.toString(),
-    })
-    onOpen()
-  }
 
   const enterLotteryHandler = useCallback(async(lotteryId, ethValue) => {
     if(!connected){
@@ -306,7 +323,7 @@ export default function LotteryListing() {
               >
                 
                 {allLotteryIds.map((data, index) =>(
-                  <Lottery index={index} key={index} lotteryId={data} enterLotteryHandler={enterLotteryHandler} showLotteryDetails={showLotteryDetails} setModalData={setModalData} entryBtnLoaders={entryBtnLoaders}/>
+                  <Lottery index={index} key={index} lotteryId={data} enterLotteryHandler={enterLotteryHandler} entryBtnLoaders={entryBtnLoaders} />
                 ))}
               </SimpleGrid>:
 
@@ -318,7 +335,7 @@ export default function LotteryListing() {
         </>
       
        : <Spinner loading size={40} applyPadding/>}
-       <LotteryDetailModal isOpen={isOpen} onClose={onClose} data={modalData}/>
+       {/* <LotteryDetailModal isOpen={isOpen} onClose={onClose} lId={modalLotteryId} data={details} isDetailLoading={isDetailLoading} /> */}
        <ToastMessage message={hasError} toastType="error"/>
     </Flex>
    </>

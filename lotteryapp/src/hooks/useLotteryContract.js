@@ -58,7 +58,33 @@ const useLotteryContract = () => {
             }
         },
       )
+
       
+    const getLotteryDetail = useCallback(async(_lotteryId) => {
+        dispatch(startAction('FETCHING_LOTTERY_DETAIL'));
+        try {
+            const data = await contract.getLotteryDetails(_lotteryId);
+        
+            dispatch({
+                type:'FETCHING_LOTTERY_DETAIL_SUCCESS',
+                payload: {
+                    id: _lotteryId,
+                    data :{
+                        ticketPrice: ethers.utils.formatEther(data[1].toString()),
+                        pricePool: ethers.utils.formatEther(data[2].toString()),
+                        players: data[3].length,
+                        winner: data[4],
+                        active: data[5]
+                    }
+                }
+            });
+        } catch (e) {
+            console.log('error fetching lottery detail', e);
+            dispatch(errorAction('FETCHING_LOTTERY_DETAIL', 'Error while fetching allowed count'));
+        }
+        dispatch(stopAction('FETCHING_LOTTERY_DETAIL'))
+
+    },[contract, dispatch])
 
     const getLotteryAllowedCount = useCallback(async() => {
         dispatch(startAction('FETCHING_ALLOWED_COUNT'));
@@ -134,6 +160,7 @@ const useLotteryContract = () => {
         fetchAllLotteryIds,
         getLotteryManagerAddress,
         getLotteryAllowedCount,
+        getLotteryDetail,
         startLottery,
         enterLottery
     }

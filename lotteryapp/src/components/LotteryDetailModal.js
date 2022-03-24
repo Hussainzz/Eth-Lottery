@@ -12,36 +12,46 @@ import {
     List,
     ListItem
   } from '@chakra-ui/react'
-const LotteryDetailModal = ({isOpen, onClose, data}) => {
+import Spinner from './Spinner'
+  
+const LotteryDetailModal = ({isOpen, onClose, lId, data, isDetailLoading}) => {
 
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Eth-Lottery ID: {data.lotteryId}</ModalHeader>
+          <ModalHeader>Eth-Lottery ID: {lId.toString()}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-          <List spacing={2}>
-                <ListItem>
-                  <Text as={'span'} fontWeight={'bold'}>
-                    Ticket Price:
-                  </Text>{' '}
-                  0.5 ether
-                </ListItem>
-                <ListItem>
-                  <Text as={'span'} fontWeight={'bold'}>
-                    Active Players:
-                  </Text>{' '}
-                  5
-                </ListItem>
-                <ListItem>
-                  <Text as={'span'} fontWeight={'bold'}>
-                    Current Price Pool:
-                  </Text>{' '}
-                  10 ether
-                </ListItem>
-                </List>
+            {(isDetailLoading) ? <Spinner/> :
+              <>
+                {(typeof data[lId] !== 'undefined') ? 
+                    <List spacing={2}>
+                    <ListItem>
+                      <Text as={'span'} fontWeight={'bold'}>
+                        Ticket Price:
+                      </Text>{' '}
+                      {data[lId]['ticketPrice']} ether
+                    </ListItem>
+                    <ListItem>
+                      <Text as={'span'} fontWeight={'bold'}>
+                        Active Players:
+                      </Text>{' '}
+                      {data[lId]['players']}
+                    </ListItem>
+                    <ListItem>
+                      <Text as={'span'} fontWeight={'bold'}>
+                        Current Price Pool:
+                      </Text>{' '}
+                      {data[lId]['pricePool']} ether
+                    </ListItem>
+                  </List>
+                  :
+                  ''
+                }
+              </>
+            }
           </ModalBody>
 
           <ModalFooter>
