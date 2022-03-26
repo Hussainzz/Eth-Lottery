@@ -23,41 +23,6 @@ const useLotteryContract = () => {
         signerOrProvider: signer.data || provider
     });
 
-    useContractEvent(
-        {
-            addressOrName: process.env.REACT_APP_LOTTERY_CONTRACT,
-            contractInterface: LotteryContract.abi,
-        },
-        'NewLotteryPlayer',
-        (event) => {
-            if(showEvent){
-                toast({
-                    title: 'You successfully entered the lottery, Best of luck',
-                    status: 'success',
-                    isClosable: true,
-                });
-                setShowEvent(false);
-            }
-        },
-      )
-
-      useContractEvent(
-        {
-            addressOrName: process.env.REACT_APP_LOTTERY_CONTRACT,
-            contractInterface: LotteryContract.abi,
-        },
-        'LotteryCreated',
-        (event) => {
-            if(showEvent){
-                toast({
-                    title: 'New Lottery Created',
-                    status: 'success',
-                    isClosable: true,
-                });
-                setShowEvent(false);
-            }
-        },
-      )
 
       
     const getLotteryDetail = useCallback(async(_lotteryId) => {
@@ -157,6 +122,7 @@ const useLotteryContract = () => {
     },[contract]);
 
     return {
+        contract,
         fetchAllLotteryIds,
         getLotteryManagerAddress,
         getLotteryAllowedCount,

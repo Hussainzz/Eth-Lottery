@@ -11,16 +11,19 @@ const useLotteryAction = (funcName) => {
         funcName
     );
 
-    const [waitResult, wait] = useWaitForTransaction({
-        wait: data?.wait
-    })
+    const [{data:waitData, error:waitError, loading:waitLoading}, wait] = useWaitForTransaction({
+        skip: true
+    });
     
     return {
         txnData: data,
         txnError: error, 
         txnLoading: loading, 
         callContract: write,
-        waitResult,
+        LotteryContract,
+        waitData,
+        waitError,
+        waitLoading,
         wait
     }
 };

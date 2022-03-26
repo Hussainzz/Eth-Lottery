@@ -11,7 +11,6 @@ import {
   Text,
   Badge,
   Stack,
-  useDisclosure,
   useToast
 } from "@chakra-ui/react";
 import { FaEthereum } from "react-icons/fa";
@@ -24,6 +23,10 @@ import {ethers} from 'ethers';
 import useLotteryAction from '../hooks/useLotteryActions';
 import {getEMessage, eventMessage} from '../errorMessages';
 import { useMetaMaskAccount } from '../context/AccountContext';
+import { useContractEvent, useProvider } from 'wagmi';
+import Confetti from 'react-confetti'
+import LotteryContract from '../contracts/Lottery.json';
+
 
 const backgrounds = [
   `url("data:image/svg+xml, %3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'560\' height=\'185\' viewBox=\'0 0 560 185\' fill=\'none\'%3E%3Cellipse cx=\'102.633\' cy=\'61.0737\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23ED64A6\' /%3E%3Cellipse cx=\'399.573\' cy=\'123.926\' rx=\'102.633\' ry=\'61.0737\' fill=\'%23F56565\' /%3E%3Cellipse cx=\'366.192\' cy=\'73.2292\' rx=\'193.808\' ry=\'73.2292\' fill=\'%2338B2AC\' /%3E%3Cellipse cx=\'222.705\' cy=\'110.585\' rx=\'193.808\' ry=\'73.2292\' fill=\'%23ED8936\' /%3E%3C/svg%3E")`,
@@ -33,11 +36,11 @@ const backgrounds = [
 ];
 
 function Lottery(props) {
-  const { index,lotteryId,enterLotteryHandler, entryBtnLoaders } = props;
+  const { index,lotteryId,enterLotteryHandler, entryBtnLoaders, pickWinnerHandler, winBtnLoaders, setDeclareWinner } = props;
   const [entryFee, setEntryFee] = useState('');
-  
+  const { connectedAddr } = useMetaMaskAccount();
   const {getLotteryDetail} = useLotteryContract();
-  const {details} = useSelector(state => state.lottery);
+  const {details, manager} = useSelector(state => state.lottery);
   const loadingState = useSelector(state => state.loading);
   const isDetailLoading = checkIfLoading(loadingState, 'FETCHING_LOTTERY_DETAIL_SUCCESS')
 
@@ -47,6 +50,29 @@ function Lottery(props) {
     })()
   },[entryBtnLoaders[lotteryId]])
 
+
+  useContractEvent(
+    {
+        addressOrName: process.env.REACT_APP_LOTTERY_CONTRACT,
+        contractInterface: LotteryContract.abi,
+    },
+    'WinnerDeclared',
+    (event) => {
+      console.log(event);
+      console.log(details[lotteryId.toString()]);
+
+      if(typeof details[lotteryId.toString()] !== 'undefined'){
+        if(!details[lotteryId.toString()].active){
+          console.log('Announced Winner');
+          setDeclareWinner(true);
+        }
+      }
+        
+    },{
+      once: true
+    }
+  )
+ 
   return (
     <Flex
       boxShadow={"lg"}
@@ -108,39 +134,54 @@ function Lottery(props) {
         }
        
 
+       {(typeof details[lotteryId.toString()] !== 'undefined') ?
         <Box pt={4}>
-          <Input type="number" placeholder="Enter Eth" size="sm" value={entryFee} onChange={(e) => setEntryFee(e.target.value)}/>
+          {(!details[lotteryId.toString()].active) && 
+              <>
+              <Input type="number" placeholder="Enter Eth" size="sm" value={entryFee} onChange={(e) => setEntryFee(e.target.value)}/>
+                <Button
+                  size="sm"
+                  w={"full"}
+                  mt={3}
+                  bg={"#3182ce"}
+                  color={"white"}
+                  rounded={"md"}
+                  _hover={{
+                    transform: "translateY(-2px)",
+                    boxShadow: "lg",
+                  }}
+                  onClick={() => {enterLotteryHandler(lotteryId, entryFee)}}
+                  isLoading={entryBtnLoaders[lotteryId]}
+                  id={`enterBtn${lotteryId}`}
+                >
+                  Enter Lottery
+                </Button>
 
-          <Button
-            size="sm"
-            w={"full"}
-            mt={3}
-            bg={useColorModeValue("#3182ce", "gray.900")}
-            color={"white"}
-            rounded={"md"}
-            _hover={{
-              transform: "translateY(-2px)",
-              boxShadow: "lg",
-            }}
-            onClick={() => {enterLotteryHandler(lotteryId, entryFee)}}
-            isLoading={entryBtnLoaders[lotteryId]}
-            id={`enterBtn${lotteryId}`}
-          >
-            Enter Lottery
-          </Button>
-
-          {/* <Button size="xs"
-            w={"full"}
-            mt={3}
-            bg={useColorModeValue("#000000", "gray.900")}
-            color={"white"}
-            rounded={"md"}
-            _hover={{
-              transform: "translateY(-2px)",
-              boxShadow: "lg",
-            }} onClick={() => {showLotteryDetails(lotteryId)}}>View Details</Button> */}
-
+                {((connectedAddr == manager )&&(details[lotteryId.toString()].players >= 1)) &&
+                  <Button size="xs"
+                  w={"full"}
+                  mt={3}
+                  bg={"#000000"}
+                  color={"white"}
+                  rounded={"md"}
+                  _hover={{
+                    transform: "translateY(-2px)",
+                    boxShadow: "lg",
+                  }} onClick={() => {pickWinnerHandler(lotteryId)}} isLoading={winBtnLoaders[lotteryId]}>PickWinner</Button>
+                }
+              </>
+          }
+          {
+            (details[lotteryId.toString()].active) &&  
+            <>
+              <Text as='i' pr="2">Winner</Text>
+              <Badge variant='solid' colorScheme='green'>
+                {details[lotteryId.toString()].winner}
+              </Badge>
+            </>
+          }
         </Box>
+        :''}
       </Flex>
       <Icon as={FaEthereum} boxSize="50" />
     </Flex>
@@ -148,81 +189,124 @@ function Lottery(props) {
 }
 
 export default function LotteryListing() {
+  const provider = useProvider()
   const toast = useToast();
-  const [modalLotteryId, setModalLotteryId] = useState(0);
   const [reloadList, setReloadList] = useState(true);
-  const [showEvent, setShowEvent] = useState(false);
+  const [declareWinner, setDeclareWinner] = useState(false);
+  const [confetti, setConfetti] = useState(0);
   const { connectedAddr, connected} = useMetaMaskAccount();
   const [entryBtnLoaders, setEntryBtnLoaders] = useState({})
+  const [winBtnLoaders, setWinBtnLoaders] = useState({})
   const {
     txnData,
     txnError, 
     txnLoading, 
     callContract,
-    waitResult, wait
+    waitData:entryLWaitData, waitError:entryLWaitError, waitLoading:entryLWaitLoading, wait
   } = useLotteryAction('enterLottery');
 
   const {
     txnData: startLData,
     txnError: startLError, 
     txnLoading: startLLoading, 
-    callContract:startLottery,
-    waitResult:startLotteryWaitResult, wait:swait
-  } = useLotteryAction('startLottery');
+    callContract:startLottery, waitData:startLWaitResult, waitError:startLWaitError, waitLoading:startLWaitLoading, wait: swait } = useLotteryAction('startLottery');
 
-  const {fetchAllLotteryIds, getLotteryDetail} = useLotteryContract();
-  const {allLotteryIds, manager, details} = useSelector(state => state.lottery);
+  const {
+    txnData: winnerTxn,
+    txnError: winnerTxnErr, 
+    txnLoading: winnerLoading, 
+    callContract:pickWinner,
+    waitData:winLWaitData, waitError:winLWaitError, waitLoading:winLWaitLoading, wait:pickWait,
+    LotteryContract
+  } = useLotteryAction('pickWinner');
+
+  const {contract, fetchAllLotteryIds} = useLotteryContract();
+  const {allLotteryIds, manager} = useSelector(state => state.lottery);
   const loadingState = useSelector(state => state.loading);
   
   const isLoading = checkIfLoading(loadingState, 'FETCH_LOTTERY_IDS')
   const hasError = checkIfError(loadingState,'FETCH_LOTTERY_IDS');
 
-  //enterLottery
+  //start Lottery Event 
   useEffect(() => {
-    handlerTxnEvents(txnData, waitResult);
-  },[waitResult])
+    if((typeof startLWaitResult !== "undefined") && (!startLWaitLoading)){
+      handleEvents(startLWaitResult, 'LotteryCreated')
+    }
+  },[startLWaitResult, startLWaitLoading]);
 
-  //startLottery
+  //enter Lottery
   useEffect(() => {
-    handlerTxnEvents(startLData, startLotteryWaitResult);
-  },[startLotteryWaitResult])
+    if((typeof entryLWaitData !== "undefined") && (!entryLWaitLoading)){
+     handleEvents(entryLWaitData, 'NewLotteryPlayer')
+    }
+ },[entryLWaitData, entryLWaitLoading]);
+
+ //Picking Winner
+ useEffect(() => {
+  if((typeof winLWaitData !== "undefined") && (!winLWaitLoading)){
+   handleEvents(winLWaitData, 'RandomnessRequested')
+  }
+},[winLWaitData, winLWaitLoading]);
 
 
-  const handlerTxnEvents = async(eventData, waitData) => {
-    if((typeof eventData !== "undefined") && (typeof waitData.data !== "undefined") && (!waitData.loading)){
-      if(showEvent && waitData.data.events){
-        const e = waitData.data.events[0];
+  //event handler
+  const handleEvents = async (eventData, eventType) => {
+    const currentBlock = await provider.getBlockNumber();
+    console.log(currentBlock);
+    console.log(eventData.blockNumber);
+    console.log(eventData);
+    if(eventData.events){
+      
+      const e = eventData.events.find(eve => eve.event === eventType);
+      console.log(e);
+      if(typeof e !== "undefined"){
         toast({
           title:  eventMessage(e.event) ,
           status: 'success',
           isClosable: true,
         });
-        setShowEvent(false);
+  
         if(e.event === 'NewLotteryPlayer'){
           setEntryBtnLoaders(prevS => {
             return {
               ...prevS,
-              [e.args[0].toString()]: txnLoading
+              [e.args[0].toString()]: entryLWaitLoading
             }
           });
         }
-
+  
         if(e.event === 'LotteryCreated') {
           setReloadList(true);
         }
+  
+        if(e.event === 'RandomnessRequested'){
+          //setDeclareWinner(true);
+          setWinBtnLoaders(prevS => {
+            return {
+              ...prevS,
+              [e.args[1].toString()]: winLWaitLoading
+            }
+          });
+        }
       }
+
     }
   }
 
+
   useEffect(() => {
-      handlerTxnErrors(txnError);
-      setEntryBtnLoaders({})
+    handlerTxnErrors(txnError);
+    setEntryBtnLoaders({})
   },[txnError])
 
   useEffect(() => {
-      handlerTxnErrors(startLError);
-      setEntryBtnLoaders({})
+    handlerTxnErrors(startLError);
   },[startLError])
+
+  useEffect(() => {
+    handlerTxnErrors(winnerTxnErr);
+    setWinBtnLoaders({})
+  },[winnerTxnErr])
 
   const handlerTxnErrors = async(err) => {
     if(typeof err !== "undefined"){
@@ -252,7 +336,9 @@ export default function LotteryListing() {
   },[reloadList])
 
 
+  //enter lottery action
   const enterLotteryHandler = useCallback(async(lotteryId, ethValue) => {
+    if(ethValue === "") return;
     if(!connected){
       toast({
         title: 'Please Connect to MetaMask',
@@ -267,16 +353,18 @@ export default function LotteryListing() {
         [lotteryId]: true
       }
     });
-    await callContract({
+    const txn = await callContract({
       args: [lotteryId],
       overrides: {
         value: ethers.utils.parseEther(ethValue.toString())
       }
     });
-    await wait();
-    setShowEvent(true);
+    if(typeof txn.data !== 'undefined'){
+      await wait({wait: txn.data.wait});
+    }
   },[connected]);
 
+  //start lottery action
   const startLotteryHandler = async () => {
     if(!connected){
       toast({
@@ -286,10 +374,44 @@ export default function LotteryListing() {
       });
       return;
     }
-    await startLottery();
-    await swait();
-    setShowEvent(true);
+    const txn = await startLottery();
+    if(typeof txn.data !== 'undefined'){
+      await swait({wait: txn.data.wait});
+    }
   };
+
+  const pickWinnerHandler = useCallback(async(lotteryId) => {
+    if(!connected){
+      toast({
+        title: 'Please Connect to MetaMask',
+        status: 'error',
+        isClosable: true,
+      });
+      return;
+    }
+    setWinBtnLoaders(prevS => {
+      return {
+        ...prevS,
+        [lotteryId]: true
+      }
+    });
+    const txn = await pickWinner({
+      args: [lotteryId]
+    });
+    if(typeof txn.data !== 'undefined'){
+      await pickWait({wait: txn.data.wait});
+    }
+  },[connected]);
+
+  useEffect(() => {
+    if(declareWinner){
+      setConfetti(300);
+      setTimeout(
+        () => setConfetti(0), 
+        20000
+      );
+    }
+  },[declareWinner])
 
   return (
    <>
@@ -300,7 +422,7 @@ export default function LotteryListing() {
         justifyContent={"flex-start"}
         direction={"row"}
         >
-      <Button colorScheme="blue" isLoading={startLLoading} onClick={startLotteryHandler}>Start Lottery</Button>
+      <Button colorScheme="blue" isLoading={startLWaitLoading} onClick={startLotteryHandler}>Start Lottery</Button>
     </Flex>
     }
      <Flex
@@ -310,6 +432,7 @@ export default function LotteryListing() {
       direction={"column"}
       width={"full"}
       >
+        {(confetti !== 0) && <Confetti numberOfPieces={confetti}/>} 
         
        { (!isLoading) ?
         <>
@@ -323,7 +446,7 @@ export default function LotteryListing() {
               >
                 
                 {allLotteryIds.map((data, index) =>(
-                  <Lottery index={index} key={index} lotteryId={data} enterLotteryHandler={enterLotteryHandler} entryBtnLoaders={entryBtnLoaders} />
+                  <Lottery index={index} key={index} lotteryId={data} enterLotteryHandler={enterLotteryHandler} entryBtnLoaders={entryBtnLoaders} winBtnLoaders={winBtnLoaders} pickWinnerHandler={pickWinnerHandler} setDeclareWinner={setDeclareWinner}/>
                 ))}
               </SimpleGrid>:
 

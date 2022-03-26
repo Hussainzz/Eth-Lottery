@@ -3,7 +3,8 @@ const messages = {
 }
 
 const eventMessages = {
-    "NewLotteryPlayer":"You have successfully entered the lottery"
+    "NewLotteryPlayer":"You have successfully entered the lottery",
+    "RandomnessRequested" : "Winner will be announced within 60secs"
 }
 
 export const getEMessage = (message) => {

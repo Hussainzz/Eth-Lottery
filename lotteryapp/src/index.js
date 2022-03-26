@@ -10,10 +10,10 @@ import {Provider as RProvider} from 'react-redux';
 import store from "./redux/store";
 
 // Provider that will be used when no wallet is connected (aka no signer)
-const provider = providers.getDefaultProvider("http://127.0.0.1:8545/",{
+const provider = providers.getDefaultProvider(process.env.REACT_APP_PROVIDER_URL/* ,{
   infura: process.env.REACT_APP_INFURA_KEY,
   alchemy: process.env.REACT_APP_ALCHEMY_KEY
-});
+} */);
 
 
 const connector = [
