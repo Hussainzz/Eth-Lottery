@@ -1,8 +1,10 @@
 const messages = {
-    "invalidFee()":"Please enter a valid entry fee"
+    "invalidFee()":"Please enter a valid entry fee",
+    "lotteryNotFound()": "Lottery Does Not Exist"
 }
 
 const eventMessages = {
+    "LotteryCreated": "New Lottery Has Been Created Successfully",
     "NewLotteryPlayer":"You have successfully entered the lottery",
     "RandomnessRequested" : "Winner will be announced within 60secs"
 }

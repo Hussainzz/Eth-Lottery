@@ -43,12 +43,12 @@ function Lottery(props) {
   const {details, manager} = useSelector(state => state.lottery);
   const loadingState = useSelector(state => state.loading);
   const isDetailLoading = checkIfLoading(loadingState, 'FETCHING_LOTTERY_DETAIL_SUCCESS')
-
+  const [reloadInfo, setReloadInfo] = useState(false);
   useEffect(() => {
     (async()=>{
       await getLotteryDetail(lotteryId);
     })()
-  },[entryBtnLoaders[lotteryId]])
+  },[entryBtnLoaders[lotteryId], reloadInfo])
 
 
   useContractEvent(
@@ -58,16 +58,12 @@ function Lottery(props) {
     },
     'WinnerDeclared',
     (event) => {
-      console.log(event);
-      console.log(details[lotteryId.toString()]);
-
       if(typeof details[lotteryId.toString()] !== 'undefined'){
         if(!details[lotteryId.toString()].active){
-          console.log('Announced Winner');
           setDeclareWinner(true);
+          setReloadInfo(true);
         }
       }
-        
     },{
       once: true
     }
@@ -138,26 +134,39 @@ function Lottery(props) {
         <Box pt={4}>
           {(!details[lotteryId.toString()].active) && 
               <>
-              <Input type="number" placeholder="Enter Eth" size="sm" value={entryFee} onChange={(e) => setEntryFee(e.target.value)}/>
-                <Button
-                  size="sm"
-                  w={"full"}
-                  mt={3}
-                  bg={"#3182ce"}
-                  color={"white"}
-                  rounded={"md"}
-                  _hover={{
-                    transform: "translateY(-2px)",
-                    boxShadow: "lg",
-                  }}
-                  onClick={() => {enterLotteryHandler(lotteryId, entryFee)}}
-                  isLoading={entryBtnLoaders[lotteryId]}
-                  id={`enterBtn${lotteryId}`}
-                >
-                  Enter Lottery
-                </Button>
+              
+                {((details[lotteryId.toString()].playersData.length) && (details[lotteryId.toString()].playersData.includes(connectedAddr))) ?
+                  ''
+                :
+                 <>
+                  <Input type="number" placeholder="Enter Eth" size="sm" value={entryFee} onChange={(e) => setEntryFee(e.target.value)}/>
+                  <Button
+                    size="sm"
+                    w={"full"}
+                    mt={3}
+                    bg={"#3182ce"}
+                    color={"white"}
+                    rounded={"md"}
+                    _hover={{
+                      transform: "translateY(-2px)",
+                      boxShadow: "lg",
+                    }}
+                    onClick={() => {
+                      if((details[lotteryId.toString()].playersData.length)&&(details[lotteryId.toString()].playersData.includes(connectedAddr))){
+                          return;
+                      }
+                      enterLotteryHandler(lotteryId, entryFee)
+                    }}
+                    isLoading={entryBtnLoaders[lotteryId]}
+                    id={`enterBtn${lotteryId}`}
+                  >
+                    Enter Lottery
+                  </Button>
+                 </>
+                }
+                
 
-                {((connectedAddr == manager )&&(details[lotteryId.toString()].players >= 1)) &&
+                {((connectedAddr === manager )&&(details[lotteryId.toString()].players >= 1)) &&
                   <Button size="xs"
                   w={"full"}
                   mt={3}
@@ -181,7 +190,7 @@ function Lottery(props) {
             </>
           }
         </Box>
-        :''}
+        : <Spinner />}
       </Flex>
       <Icon as={FaEthereum} boxSize="50" />
     </Flex>
@@ -189,7 +198,6 @@ function Lottery(props) {
 }
 
 export default function LotteryListing() {
-  const provider = useProvider()
   const toast = useToast();
   const [reloadList, setReloadList] = useState(true);
   const [declareWinner, setDeclareWinner] = useState(false);
@@ -198,29 +206,22 @@ export default function LotteryListing() {
   const [entryBtnLoaders, setEntryBtnLoaders] = useState({})
   const [winBtnLoaders, setWinBtnLoaders] = useState({})
   const {
-    txnData,
     txnError, 
-    txnLoading, 
     callContract,
-    waitData:entryLWaitData, waitError:entryLWaitError, waitLoading:entryLWaitLoading, wait
+    waitData:entryLWaitData, waitLoading:entryLWaitLoading, wait
   } = useLotteryAction('enterLottery');
 
   const {
-    txnData: startLData,
-    txnError: startLError, 
-    txnLoading: startLLoading, 
-    callContract:startLottery, waitData:startLWaitResult, waitError:startLWaitError, waitLoading:startLWaitLoading, wait: swait } = useLotteryAction('startLottery');
+    txnError: startLError,
+    callContract:startLottery, waitData:startLWaitResult, waitLoading:startLWaitLoading, wait: swait } = useLotteryAction('startLottery');
 
   const {
-    txnData: winnerTxn,
     txnError: winnerTxnErr, 
-    txnLoading: winnerLoading, 
     callContract:pickWinner,
-    waitData:winLWaitData, waitError:winLWaitError, waitLoading:winLWaitLoading, wait:pickWait,
-    LotteryContract
+    waitData:winLWaitData, waitLoading:winLWaitLoading, wait:pickWait,
   } = useLotteryAction('pickWinner');
 
-  const {contract, fetchAllLotteryIds} = useLotteryContract();
+  const {fetchAllLotteryIds} = useLotteryContract();
   const {allLotteryIds, manager} = useSelector(state => state.lottery);
   const loadingState = useSelector(state => state.loading);
   
@@ -251,14 +252,8 @@ export default function LotteryListing() {
 
   //event handler
   const handleEvents = async (eventData, eventType) => {
-    const currentBlock = await provider.getBlockNumber();
-    console.log(currentBlock);
-    console.log(eventData.blockNumber);
-    console.log(eventData);
     if(eventData.events){
-      
       const e = eventData.events.find(eve => eve.event === eventType);
-      console.log(e);
       if(typeof e !== "undefined"){
         toast({
           title:  eventMessage(e.event) ,
@@ -280,7 +275,6 @@ export default function LotteryListing() {
         }
   
         if(e.event === 'RandomnessRequested'){
-          //setDeclareWinner(true);
           setWinBtnLoaders(prevS => {
             return {
               ...prevS,
@@ -292,7 +286,6 @@ export default function LotteryListing() {
 
     }
   }
-
 
   useEffect(() => {
     handlerTxnErrors(txnError);
@@ -318,8 +311,16 @@ export default function LotteryListing() {
         });
         return;
       }
+      if(err?.name && err.name === "Error"){
+        toast({
+          title: 'Invalid Input',
+          status: 'error',
+          isClosable: true,
+        });
+        return;
+      }
       toast({
-        title: getEMessage(err.data.message),
+        title: getEMessage(err?.data?.message),
         status: 'error',
         isClosable: true,
       });
@@ -362,7 +363,7 @@ export default function LotteryListing() {
     if(typeof txn.data !== 'undefined'){
       await wait({wait: txn.data.wait});
     }
-  },[connected]);
+  },[connected, callContract, toast, wait]);
 
   //start lottery action
   const startLotteryHandler = async () => {
@@ -401,7 +402,7 @@ export default function LotteryListing() {
     if(typeof txn.data !== 'undefined'){
       await pickWait({wait: txn.data.wait});
     }
-  },[connected]);
+  },[connected, pickWait, pickWinner, toast]);
 
   useEffect(() => {
     if(declareWinner){

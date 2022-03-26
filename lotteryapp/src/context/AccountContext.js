@@ -5,7 +5,7 @@ export const AccountContext = createContext();
 
 export const AccountProvider = ({ children }) => {
   const [{ data, error, loading }, connect] = useConnect();
-  const [{data: accountQuery, error:accountError, loading:accountLoading}, disconnect] = useAccount();
+  const [{data: accountQuery}, disconnect] = useAccount();
 
   const [connectedAddr, setConnectedAddr] = useState('');
   const [connected, setConnected] = useState(false);
@@ -20,7 +20,7 @@ export const AccountProvider = ({ children }) => {
   }, [error, loading]);
 
   useEffect(() => {
-    if ((accountQuery?.address && allowSignIn)/*  || (accountQuery?.address && !allowSignIn) */) {
+    if ((accountQuery?.address && allowSignIn)) {
       setConnectedAddr(accountQuery.address);
       setConnected(true);
     }else{
@@ -31,17 +31,14 @@ export const AccountProvider = ({ children }) => {
 
 
   const connectToMetaMask = async () => {
-    //console.log(data.connectors[0]);
     const c = await connect(data.connectors[0]);
     if(c.data?.chain.id){
       checkChain(c.data.chain.id);
     }
-    //console.log(c);
   };
 
   const checkChain = (cId) => {
     const connectedNetwork = getSupportedNetworks(cId)
-    console.log(connectedNetwork)
     if(typeof connectedNetwork == 'undefined'){
       setAccountErrorMessage('Please Connect To Rinkeby Test Network');
       setAllowSignIn(false);
