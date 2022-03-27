@@ -12,5 +12,4 @@ deployments
 #client app
 lotteryapp/.env
 lotteryapp/node_modules
-lotteryapp/src/contracts
 
