@@ -1,5 +1,5 @@
 <img src="/lotteryapp/src/eth-bg.png" width="900">
-## Installation
+# Installation
     
 `npm install //root folder`
 
@@ -42,3 +42,7 @@ Next, Go to the lotteryapp folder
 ```
 > npm start
 ```
+# Demo
+
+<img src="/eth-winner.gif" width="900">
+
