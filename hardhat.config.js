@@ -1,10 +1,8 @@
 require("dotenv").config();
 require("@nomiclabs/hardhat-etherscan");
 require("@nomiclabs/hardhat-waffle");
-// Advance project aditional libraries
 require("hardhat-gas-reporter");
 require("solidity-coverage");
-//////////////////////////////////////
 require("hardhat-deploy");
 require("@appliedblockchain/chainlink-plugins-fund-link");
 

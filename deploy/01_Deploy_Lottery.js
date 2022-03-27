@@ -64,31 +64,6 @@ module.exports = async ({
   );
   await lData.updateLotteryContract(lottery.address);
 
-  //lottery 2
-  // const lotteryData1 = await deploy("LotteryData1",{
-  //   from:deployer,
-  //   log: true,
-  //   contract: "LotteryData"
-  // });
-
-  // const lottery1 = await deploy("Lottery1", {
-  //   from: deployer,
-  //   args: [
-  //     keyHash,
-  //     subscriptionId, 
-  //     vrfCoordinatorAddress, 
-  //     linkTokenAddress,
-  //     lotteryData1.address
-  //   ],
-  //   log: true,
-  //   waitConfirmations: waitBlockConfirmations,
-  //   contract: "Lottery"
-  // });
-
-  // const lData1 = await ethers.getContractAt(
-  //   "LotteryData", lotteryData1.address, await ethers.getSigner()
-  // );
-  // await lData1.updateLotteryContract(lottery1.address);
 
   log("----------------------------------------------------");
   log("VRF subscriptionId  " +  subscriptionId);
@@ -96,10 +71,6 @@ module.exports = async ({
   log("Lottery Deployed On " +  lottery.address + " network " + network.name);
   log("----------------------------------------------------");
 
-  // log("----------------------------------------------------");
-  // log("Lottery Data1 Deployed On " +  lotteryData1.address);
-  // log("Lottery1 Deployed On " +  lottery1.address);
-  // log("----------------------------------------------------");
 
 };
 

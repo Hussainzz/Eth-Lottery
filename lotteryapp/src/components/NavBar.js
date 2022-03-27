@@ -5,16 +5,11 @@ import {
   VStack,
   Button,
   Badge,
-  Heading,
-  useColorMode,
-  useColorModeValue,
   Image,
   Spacer,
   useToast
 } from "@chakra-ui/react";
-//import { IconButton } from "@chakra-ui/button";
-//import { FaSun, FaMoon, FaInstagram, FaGithub, FaLinkedin } from 'react-icons/fa'
-//import logo from "../ethLot.png";
+import logo from "../eth-bg.png";
 import { useMetaMaskAccount } from "../context/AccountContext";
 
 const NavBar = () => {
@@ -36,11 +31,9 @@ const NavBar = () => {
   return (
     <VStack p={3}>
       <Flex w="100%">
-       {/*  <Box w="100%" p={4} color="white"> */}
-          {/* <Image src={logo} htmlWidth="150px" /> */}
-        {/* </Box> */}
-        <Heading
-          ml="8" size="md" fontWeight='bold' color="cyan.400">Eth-Lottery</Heading>
+        <Box w="100%" p={4} color="white">
+          <Image src={logo} htmlWidth="300px" /> 
+        </Box>
         <Spacer />
         <Box p={5}>
           <Badge colorScheme="green">{connectedAddr}</Badge>

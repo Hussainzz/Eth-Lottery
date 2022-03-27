@@ -1,6 +1,5 @@
-const {expect, assert} = require('chai');
-const {ethers, getChainId, deployments, companionNetworks} = require('hardhat');
-const {config, developmentChains,VERIFICATION_BLOCK_CONFIRMATIONS} = require('../config/chainlink.config')
+const {expect} = require('chai');
+const {ethers, getChainId, deployments} = require('hardhat');
 
 describe("LotteryGame Unit Tests", () => {
     let LotteryGame;

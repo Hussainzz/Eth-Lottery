@@ -21,7 +21,6 @@ contract Lottery is VRFConsumerBaseV2{
     Counters.Counter private lotteryId;
 
     uint public totalAllowedPlayers = 10;
-    //mapping(address => bool) private activeLotteryPlayers;
 
     address public lotteryManager;
 
@@ -70,26 +69,12 @@ contract Lottery is VRFConsumerBaseV2{
     }
 
     modifier onlyLotteryManager {
-        //require(msg.sender == lotteryManager, "only_lottery_manager_allowed");
         if(msg.sender != lotteryManager) revert onlyLotteryManagerAllowed();
         _;
     }
 
     function getAllLotteryIds() public view returns(uint256[] memory){
         return LOTTERY_DATA.getAllLotteryIds();
-    }
-
-    function updateTotalPlayersAllowed(uint256 _c) public onlyLotteryManager{
-        if((_c == 0) || (_c == totalAllowedPlayers)){
-            revert invalidValue();
-        }
-        //require(_c != 0 , "action_not_allowed_value_zero");
-        //require(_c != totalAllowedPlayers, "action_not_allowed");
-        totalAllowedPlayers = _c;
-    }
-
-    function getLotteryPlayers(uint256 _lotteryId) public view returns(address[] memory){
-       return LOTTERY_DATA.getLotteryPlayers(_lotteryId);
     }
 
     function startLottery() public payable onlyLotteryManager {
@@ -109,12 +94,6 @@ contract Lottery is VRFConsumerBaseV2{
         if(isFinished) revert lotteryNotActive();
         if(players.length > totalAllowedPlayers) revert lotteryFull();
         if(msg.value < ticketPrice) revert invalidFee();
-
-        //require(!isFinished, "lottery_not_active");
-        //require(players.length < totalAllowedPlayers, "lottery_full");
-        //require(activeLotteryPlayers[msg.sender], "duplicate_entry");
-        //require(msg.value >= ticketPrice, "invalid_entry_fee");
-
         uint256  updatedPricePool = prizePool + msg.value;
         LOTTERY_DATA.addPlayerToLottery(_lotteryId, updatedPricePool, msg.sender);
         emit NewLotteryPlayer(_lotteryId, msg.sender, updatedPricePool);
@@ -123,7 +102,6 @@ contract Lottery is VRFConsumerBaseV2{
     function pickWinner(uint256 _lotteryId) public onlyLotteryManager {
 
         if(LOTTERY_DATA.isLotteryFinished(_lotteryId)) revert lotteryEnded();
-        //require(!LOTTERY_DATA.isLotteryFinished(_lotteryId),"lottery_ended");
 
         address[] memory p = LOTTERY_DATA.getLotteryPlayers(_lotteryId);
         if(p.length == 1) {
