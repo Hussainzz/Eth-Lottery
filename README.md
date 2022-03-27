@@ -44,5 +44,7 @@ Next, Go to the lotteryapp folder
 ```
 # Demo
 
-<img src="/eth-winner.gif" width="900">
+https://eth-lotteryz.herokuapp.com/
+
+<img src="/eth-winner.gif" width="600">
 
