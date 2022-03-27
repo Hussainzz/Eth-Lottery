@@ -63,7 +63,7 @@ import ToastMessage from './ToastMessage';
     return (
       <>
         <Box maxW="7xl" mx={'auto'} pt={5} px={{ base: 2, sm: 12, md: 17 }}>
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={{ base: 5, lg: 8 }}>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={{ base: 5, lg: 8 }}>
             <StatsCard
               title={'Lottery Managed By'}
               stat={
@@ -77,6 +77,10 @@ import ToastMessage from './ToastMessage';
                 (isLoadingAllowedCount)?'Loading...':
                   (allowedCount && !errorFetchingAllowedCount) && allowedCount
               }
+            />
+            <StatsCard
+              title={'LOTTERY ADDRESS'}
+              stat={process.env.REACT_APP_LOTTERY_CONTRACT}
             />
           </SimpleGrid>
         </Box>

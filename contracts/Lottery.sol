@@ -20,7 +20,7 @@ contract Lottery is VRFConsumerBaseV2{
 
     Counters.Counter private lotteryId;
 
-    uint public totalAllowedPlayers = 10;
+    uint public totalAllowedPlayers = 5;
 
     address public lotteryManager;
 
@@ -48,6 +48,7 @@ contract Lottery is VRFConsumerBaseV2{
     error invalidFee();
     error lotteryNotActive();
     error lotteryFull();
+    error alreadyEntered();
     error lotteryEnded();
     error playersNotFound();
     error onlyLotteryManagerAllowed();
@@ -83,6 +84,15 @@ contract Lottery is VRFConsumerBaseV2{
         emit LotteryCreated(lotteryId.current());
     }
 
+    function isPresent(address[] memory _p, address _a) public pure returns (bool){
+        for (uint i=0; i < _p.length; i++) {
+            if(_p[i] == _a) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     function enterLottery(uint256 _lotteryId) public payable {
         (uint256 lId, 
         uint256 ticketPrice, 
@@ -90,9 +100,9 @@ contract Lottery is VRFConsumerBaseV2{
         address[] memory players, 
         address winner, 
         bool isFinished) = LOTTERY_DATA.getLottery(_lotteryId);
-
+        if(isPresent(players, msg.sender)) revert alreadyEntered();
         if(isFinished) revert lotteryNotActive();
-        if(players.length > totalAllowedPlayers) revert lotteryFull();
+        if(players.length >= totalAllowedPlayers) revert lotteryFull();
         if(msg.value < ticketPrice) revert invalidFee();
         uint256  updatedPricePool = prizePool + msg.value;
         LOTTERY_DATA.addPlayerToLottery(_lotteryId, updatedPricePool, msg.sender);

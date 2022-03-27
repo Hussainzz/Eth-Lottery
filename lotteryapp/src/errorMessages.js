@@ -1,6 +1,7 @@
 const messages = {
     "invalidFee()":"Please enter a valid entry fee",
-    "lotteryNotFound()": "Lottery Does Not Exist"
+    "lotteryNotFound()": "Lottery Does Not Exist",
+    "lotteryFull()": "Lottery Full"
 }
 
 const eventMessages = {
