@@ -1,4 +1,5 @@
 <img src="/lotteryapp/src/eth-bg.png" width="900">
+
 # Installation
     
 `npm install //root folder`
