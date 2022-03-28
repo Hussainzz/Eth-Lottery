@@ -45,7 +45,7 @@ Next, Go to the lotteryapp folder
 ```
 # Demo
 
-https://eth-lotteryz.herokuapp.com/
+https://eth-lottery-3glp1l5k0-hussainzz.vercel.app/
 
 <img src="/eth-winner.gif" width="600">
 
